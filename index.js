@@ -104,6 +104,7 @@ function batchCss(resource, list, opts, cb) {
 		q.defer(function(cb) {
 			resource.load(rurl, function(err, data) {
 				if (err) return cb(err);
+				if (Buffer.isBuffer(data)) data = data.toString();
 				var parsed = postcss.parse(data, {from: rurl});
 				postcssUrl({url: "rebase"})(parsed, {from: rurl, to: resource.url});
 				autoprefixer({ browsers: opts.browsers }).postcss(parsed);
@@ -129,6 +130,7 @@ function batchJs(resource, list, opts, cb) {
 		q.defer(function(cb) {
 			resource.load(rurl, function(err, data) {
 				if (err) return cb(err);
+				if (Buffer.isBuffer(data)) data = data.toString();
 				cur = uglify.parse(data, {filename: rurl, toplevel: cur});
 				cb();
 			});
