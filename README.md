@@ -36,6 +36,7 @@ and likewise for CSS, with automatic url rebasing, autoprefixer, and compression
 Planned feature(s)
 ------------------
 
-Automatic source maps - you don't even know you generated them.
+* Ability to pass options to uglify-js, autoprefixer-core, csswring.
+* Automatic source maps - you don't even know you generated them.
 
 
