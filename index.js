@@ -6,19 +6,24 @@ var uglify = require('uglify-js');
 var autoprefixer = require('autoprefixer-core');
 var csswring = require('csswring');
 
+
+// require('raja-minify')(raja, opts);
 module.exports = function(raja, opts) {
 	if (!opts) opts = {};
-	return domAuthorMinify.bind(null, raja, opts);
+	if (opts.minify == null) opts.minify = true;
+	if (raja.proxies.dom) {
+		raja.proxies.dom.Dom.author(domAuthorMinify.bind(null, raja, opts));
+	}
 };
 
 function domAuthorMinify(raja, opts, h, req, res) {
-	h.page.run(domTransform, function(err, groups, cb) {
+	h.page.run(domTransform, !!opts.minify, function(err, groups, cb) {
 		if (err) return cb(err);
 		build(raja, groups, opts, cb);
 	});
 }
 
-function domTransform(done) {
+function domTransform(minify, done) {
 	function renameTo(src, to) {
 		if (src != to) {
 			if (to[0] == '../' || to[0] == './' || to[0] != '/') to = src + '/../' + to;
@@ -34,6 +39,7 @@ function domTransform(done) {
 		var group;
 		nodes.forEach(function(node) {
 			var single = !node.hasAttribute('to');
+			if (single && !minify) return;
 			if (!group || single) {
 				group = {list: []};
 				groups.push(group);
@@ -83,7 +89,9 @@ function build(raja, groups, opts, cb) {
 		// not so useful - minified files already are declared as dependencies of the authorUrl
 		// if (!resource.parents) resource.parents = {};
 		// resource.parents[h.authorUrl] = true;
-		if (group.mime == "text/css") {
+		if (!opts.minify) {
+			q.defer(batch, resource, group.list, process, result, opts);
+		} else if (group.mime == "text/css") {
 			q.defer(batch, resource, group.list, processCss, resultCss, opts);
 		} else if (group.mime == "text/javascript") {
 			q.defer(batch, resource, group.list, processJs, resultJs, opts);
@@ -93,6 +101,17 @@ function build(raja, groups, opts, cb) {
 		// do not pass the list of results
 		cb(err);
 	});
+}
+
+function process(to, url, data, cur, opts) {
+	if (Buffer.isBuffer(data)) data = data.toString();
+	if (!cur) cur = [];
+	cur.push(data);
+	return cur;
+}
+
+function result(to, cur) {
+	return cur.join("\n");
 }
 
 function processCss(to, url, data, cur, opts) {
