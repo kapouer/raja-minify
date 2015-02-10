@@ -24,6 +24,7 @@ function domAuthorMinify(raja, opts, h, req, res) {
 }
 
 function domTransform(minify, done) {
+	var anc = document.createElement('a');
 	function renameTo(src, to) {
 		if (src != to) {
 			if (to[0] == '../' || to[0] == './' || to[0] != '/') to = src + '/../' + to;
@@ -31,7 +32,9 @@ function domTransform(minify, done) {
 		var split = to.split('.');
 		split.splice(-1, 0, 'min');
 		to = split.join('.');
-		return to;
+		anc.href = to;
+		if (anc.host == document.location.host) return anc.pathname;
+		else return anc.href;
 	}
 	function getGroups(selector, att, mime) {
 		var groups = [];
@@ -62,8 +65,7 @@ function domTransform(minify, done) {
 					node.parentNode.removeChild(node);
 				} else {
 					node[att] = renameTo(node[att], node.getAttribute('to') || node[att]);
-					group.to = node[att];
-					node[att] = group.to;
+					group.to = node[att]; // absolute
 					node.removeAttribute('to');
 				}
 			});
