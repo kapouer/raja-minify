@@ -24,17 +24,20 @@ function domAuthorMinify(raja, opts, h, req, res) {
 }
 
 function domTransform(minify, done) {
-	var anc = document.createElement('a');
 	function renameTo(src, to) {
 		if (src != to) {
-			if (to[0] == '../' || to[0] == './' || to[0] != '/') to = src + '/../' + to;
+			if (to[0] == '../' || to[0] == './' || to[0] != '/') {
+				// remove last component from src
+				src = src.split('/');
+				src.pop();
+				src.push(to);
+				to = src.join('/');
+			}
 		}
 		var split = to.split('.');
 		split.splice(-1, 0, 'min');
 		to = split.join('.');
-		anc.href = to;
-		if (anc.host == document.location.host) return anc.pathname;
-		else return anc.href;
+		return to;
 	}
 	function getGroups(selector, att, mime) {
 		var groups = [];
@@ -64,7 +67,7 @@ function domTransform(minify, done) {
 					}
 					node.parentNode.removeChild(node);
 				} else {
-					node[att] = renameTo(node[att], node.getAttribute('to') || node[att]);
+					node[att] = renameTo(node.getAttribute(att), node.getAttribute('to') || node.getAttribute(att));
 					group.to = node[att]; // absolute
 					node.removeAttribute('to');
 				}
