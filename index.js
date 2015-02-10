@@ -94,10 +94,10 @@ function build(raja, groups, opts, cb) {
 		// not so useful - minified files already are declared as dependencies of the authorUrl
 		// if (!resource.parents) resource.parents = {};
 		// resource.parents[h.authorUrl] = true;
-		if (!opts.minify) {
-			q.defer(batch, resource, group.list, process, result, opts);
-		} else if (group.mime == "text/css") {
+		if (group.mime == "text/css") {
 			q.defer(batch, resource, group.list, processCss, resultCss, opts);
+		} else if (!opts.minify) {
+			q.defer(batch, resource, group.list, process, result, opts);
 		} else if (group.mime == "text/javascript") {
 			q.defer(batch, resource, group.list, processJs, resultJs, opts);
 		}
@@ -124,7 +124,7 @@ function processCss(to, url, data, cur, opts) {
 	var parsed = postcss.parse(data, {from: url});
 	postcssUrl({url: "rebase"})(parsed, {from: url, to: to});
 	autoprefixer({ browsers: opts.browsers }).postcss(parsed);
-	csswring.postcss(parsed);
+	if (!opts.minify) csswring.postcss(parsed);
 	if (!cur) cur = parsed;
 	else cur.append(parsed);
 	return cur;
