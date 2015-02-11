@@ -19,7 +19,7 @@ module.exports = function(raja, opts) {
 function domAuthorMinify(raja, opts, h, req, res) {
 	h.page.run(domTransform, !!opts.minify, function(err, groups, cb) {
 		if (err) return cb(err);
-		build(raja, groups, opts, cb);
+		build(raja, h.author.url, groups, opts, cb);
 	});
 }
 
@@ -84,7 +84,7 @@ function domTransform(minify, done) {
 	done(null, scripts.concat(styles));
 }
 
-function build(raja, groups, opts, cb) {
+function build(raja, authorUrl, groups, opts, cb) {
 	if (groups.length == 0) return cb();
 	var q = queue(3);
 	groups.forEach(function(group) {
@@ -92,8 +92,9 @@ function build(raja, groups, opts, cb) {
 		resource.headers = {};
 		resource.headers['Content-Type'] = group.mime;
 		// not so useful - minified files already are declared as dependencies of the authorUrl
-		// if (!resource.parents) resource.parents = {};
-		// resource.parents[h.authorUrl] = true;
+		if (!resource.parents) resource.parents = {};
+		resource.parents[authorUrl] = true;
+		// TODO save resource parents
 		if (group.mime == "text/css") {
 			q.defer(batch, resource, group.list, processCss, resultCss, opts);
 		} else if (!opts.minify) {
