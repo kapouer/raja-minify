@@ -12,7 +12,7 @@ module.exports = function(raja, opts) {
 	if (!opts) opts = {};
 	if (opts.minify == null) opts.minify = true;
 	if (raja.proxies.dom) {
-		raja.proxies.dom.Dom.author(domAuthorMinify.bind(null, raja, opts));
+		raja.proxies.dom.Dom.author(domAuthorMinify.bind(null, raja, opts), 'after');
 	}
 };
 
