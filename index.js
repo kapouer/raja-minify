@@ -44,6 +44,7 @@ function domTransform(minify, done) {
 		var nodes = Array.prototype.slice.call(document.querySelectorAll(selector));
 		var group;
 		nodes.forEach(function(node) {
+			if (!node.hasAttribute(att) || !node.getAttribute(att)) return;
 			var single = !node.hasAttribute('to');
 			if (single && !minify) return;
 			if (!group || single) {
@@ -57,8 +58,7 @@ function domTransform(minify, done) {
 			var list = [];
 			var last = group.list.slice(-1).pop();
 			group.list.forEach(function(node) {
-				if (node[att]) list.push({src: node[att]});
-				else if (node.textContent) list.push({text: node.textContent});
+				list.push({src: node[att]});
 				if (node != last) {
 					var next = node.nextSibling;
 					while (next && next.nodeType == 3) {
