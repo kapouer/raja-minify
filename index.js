@@ -125,7 +125,7 @@ function processCss(to, url, data, cur, opts) {
 	var parsed = postcss.parse(data, {from: url});
 	postcssUrl({url: "rebase"})(parsed, {from: url, to: to});
 	autoprefixer({ browsers: opts.browsers }).postcss(parsed);
-	if (opts.minify) csswring.postcss(parsed);
+	if (opts.minify) csswring({preserveHacks: true}).postcss(parsed);
 	if (!cur) cur = parsed;
 	else cur.append(parsed);
 	return cur;
