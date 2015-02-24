@@ -86,24 +86,24 @@ function domTransform(minify, done) {
 
 function build(raja, authorUrl, groups, opts, cb) {
 	if (groups.length == 0) return cb();
-	var q = queue(3);
+	var q = queue();
 	groups.forEach(function(group) {
-		var resource = raja.create(group.to);
-		resource.headers = {};
-		resource.headers['Content-Type'] = group.mime;
-		// not so useful - minified files already are declared as dependencies of the authorUrl
-		if (!resource.parents) resource.parents = {};
-		resource.parents[authorUrl] = true;
-		// TODO save resource parents
-		if (group.mime == "text/css") {
-			q.defer(batch, resource, group.list, processCss, resultCss, opts);
-		} else if (!opts.minify) {
-			q.defer(batch, resource, group.list, process, result, opts);
-		} else if (group.mime == "text/javascript") {
-			q.defer(batch, resource, group.list, processJs, resultJs, opts);
-		}
+		raja.retrieve(group.to, function(err, resource) {
+			if (err) return cb(err);
+			if (!resource) resource = raja.create(group.to).save();
+			resource.headers = {
+				"Content-Type": group.mime
+			};
+			if (group.mime == "text/css") {
+				q.defer(batch, resource, group.list, processCss, resultCss, opts);
+			} else if (!opts.minify) {
+				q.defer(batch, resource, group.list, process, result, opts);
+			} else if (group.mime == "text/javascript") {
+				q.defer(batch, resource, group.list, processJs, resultJs, opts);
+			}
+		});
 	});
-	q.awaitAll(function(err) {
+	q.awaitAll(function(err, list) {
 		// do not pass the list of results
 		cb(err);
 	});
@@ -140,6 +140,7 @@ function processJs(to, url, data, cur, opts) {
 	cur = uglify.parse(data, {filename: url, toplevel: cur});
 	return cur;
 }
+
 function resultJs(to, cur) {
 	cur.figure_out_scope();
 	cur.compute_char_frequency();
@@ -154,9 +155,13 @@ function batch(resource, list, process, result, opts, cb) {
 	list.forEach(function(obj) {
 		q.defer(function(cb) {
 			(function(next) {
-				if (obj.src) resource.load(obj.src, next);
-				else if (obj.text) next(null, obj.text);
-				else cb();
+				if (obj.src) {
+					resource.load(obj.src, next);
+				} else if (obj.text) {
+					next(null, obj.text);
+				} else {
+					cb();
+				}
 			})(function(err, data) {
 				if (err) return cb(err);
 				cur = process(resource.url, obj.src, data, cur, opts);
@@ -168,7 +173,8 @@ function batch(resource, list, process, result, opts, cb) {
 		if (err) return cb(err);
 		if (!cur) return cb(new Error("should never happen"));
 		resource.data = result(resource.url, cur);
-		resource.save(cb);
+		resource.save();
+		cb();
 	});
 }
 
