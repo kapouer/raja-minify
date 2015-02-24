@@ -150,7 +150,7 @@ function resultJs(to, cur) {
 }
 
 function batch(resource, list, process, result, opts, cb) {
-	var q = queue(1);
+	var q = queue();
 	var cur;
 	list.forEach(function(obj) {
 		q.defer(function(cb) {
