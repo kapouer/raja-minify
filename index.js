@@ -90,26 +90,32 @@ function build(raja, authorUrl, groups, opts, cb) {
 	groups.forEach(function(group) {
 		q.defer(function(group, cb) {
 			raja.retrieve(group.to, function(err, resource) {
-				if (err) return cb(err);
 				if (!resource) resource = raja.create(group.to).save();
 				resource.headers = {
 					"Content-Type": group.mime
 				};
-				if (group.mime == "text/css") {
-					batch(resource, group.list, processCss, resultCss, opts, cb);
-				} else if (!opts.minify) {
-					batch(resource, group.list, process, result, opts, cb);
-				} else if (group.mime == "text/javascript") {
-					batch(resource, group.list, processJs, resultJs, opts, cb);
-				} else {
-					cb('Unknown group ' + group.to);
-				}
+				group.resource = resource;
+				cb();
 			});
 		}, group);
 	});
-	q.awaitAll(function(err, list) {
-		// do not pass the list of results
-		cb(err);
+	q.awaitAll(function(err) {
+		if (err) return cb(err);
+		q = queue();
+		groups.forEach(function(group) {
+			if (group.mime == "text/css") {
+				q.defer(batch, group.resource, group.list, processCss, resultCss, opts);
+			} else if (!opts.minify) {
+				q.defer(batch, group.resource, group.list, process, result, opts);
+			} else if (group.mime == "text/javascript") {
+				q.defer(batch, group.resource, group.list, processJs, resultJs, opts);
+			} else {
+				console.warn("raja-minify has unknown group");
+			}
+		});
+		q.awaitAll(function(err) {
+			cb(err);
+		});
 	});
 }
 
@@ -157,24 +163,26 @@ function batch(resource, list, process, result, opts, cb) {
 	var q = queue();
 	var cur;
 	list.forEach(function(obj) {
-		q.defer(function(cb) {
-			(function(next) {
-				if (obj.src) {
-					resource.load(obj.src, next);
-				} else if (obj.text) {
-					next(null, obj.text);
-				} else {
-					cb();
-				}
-			})(function(err, data) {
-				if (err) return cb(err);
-				cur = process(resource.url, obj.src, data, cur, opts);
+		q.defer(function(obj, cb) {
+			if (obj.src) {
+				resource.load(obj.src, function(err, data) {
+					if (err) return cb(err);
+					obj.data = data;
+					cb(null, obj);
+				});
+			} else if (obj.text) {
+				obj.data = obj.text;
+				cb(null, obj);
+			} else {
 				cb();
-			})
-		});
+			}
+		}, obj);
 	});
-	q.awaitAll(function(err) {
+	q.awaitAll(function(err, list) {
 		if (err) return cb(err);
+		list.forEach(function(obj) {
+			cur = process(resource.url, obj.src, obj.data, cur, opts);
+		});
 		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
 		resource.data = result(resource.url, cur);
 		resource.save();
