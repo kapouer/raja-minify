@@ -175,7 +175,7 @@ function batch(resource, list, process, result, opts, cb) {
 	});
 	q.awaitAll(function(err) {
 		if (err) return cb(err);
-		if (!cur) return cb(new Error("should never happen"));
+		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
 		resource.data = result(resource.url, cur);
 		resource.save();
 		cb();
