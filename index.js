@@ -88,20 +88,24 @@ function build(raja, authorUrl, groups, opts, cb) {
 	if (groups.length == 0) return cb();
 	var q = queue();
 	groups.forEach(function(group) {
-		raja.retrieve(group.to, function(err, resource) {
-			if (err) return cb(err);
-			if (!resource) resource = raja.create(group.to).save();
-			resource.headers = {
-				"Content-Type": group.mime
-			};
-			if (group.mime == "text/css") {
-				q.defer(batch, resource, group.list, processCss, resultCss, opts);
-			} else if (!opts.minify) {
-				q.defer(batch, resource, group.list, process, result, opts);
-			} else if (group.mime == "text/javascript") {
-				q.defer(batch, resource, group.list, processJs, resultJs, opts);
-			}
-		});
+		q.defer(function(group, cb) {
+			raja.retrieve(group.to, function(err, resource) {
+				if (err) return cb(err);
+				if (!resource) resource = raja.create(group.to).save();
+				resource.headers = {
+					"Content-Type": group.mime
+				};
+				if (group.mime == "text/css") {
+					batch(resource, group.list, processCss, resultCss, opts, cb);
+				} else if (!opts.minify) {
+					batch(resource, group.list, process, result, opts, cb);
+				} else if (group.mime == "text/javascript") {
+					batch(resource, group.list, processJs, resultJs, opts, cb);
+				} else {
+					cb('Unknown group ' + group.to);
+				}
+			});
+		}, group);
 	});
 	q.awaitAll(function(err, list) {
 		// do not pass the list of results
