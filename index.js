@@ -132,12 +132,12 @@ function result(to, cur) {
 
 function processCss(to, url, data, cur, opts) {
 	if (Buffer.isBuffer(data)) data = data.toString();
-	var parsed = postcss.parse(data, {from: url});
+	var parsed = postcss.parse(data, {from: url, safe: true});
 	postcssUrl({url: "rebase"})(parsed, {from: url, to: to});
 	autoprefixer({ browsers: opts.browsers }).postcss(parsed);
 	if (opts.minify) csswring({preserveHacks: true}).postcss(parsed);
 	if (!cur) cur = parsed;
-	else cur.append(parsed);
+	else cur.push(parsed);
 	return cur;
 }
 
