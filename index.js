@@ -89,11 +89,9 @@ function build(raja, authorUrl, groups, opts, cb) {
 	var q = queue();
 	groups.forEach(function(group) {
 		q.defer(function(group, cb) {
-			raja.retrieve(group.to, function(err, resource) {
-				if (!resource) resource = raja.create(group.to).save();
-				resource.headers = {
-					"Content-Type": group.mime
-				};
+			raja.upsert({url: group.to, headers: {
+				"Content-Type": group.mime
+			}}, function(err, resource) {
 				group.resource = resource;
 				cb();
 			});
@@ -185,8 +183,7 @@ function batch(resource, list, process, result, opts, cb) {
 		});
 		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
 		resource.data = result(resource.url, cur);
-		resource.save();
-		cb();
+		resource.save(cb);
 	});
 }
 
