@@ -14,12 +14,13 @@ module.exports = function(raja, opts) {
 	if (raja.proxies.dom) {
 		raja.proxies.dom.Dom.author(domAuthorMinify.bind(null, raja, opts), 'after');
 	}
+	raja.builders.minify = buildResource.bind(null, opts);
 };
 
 function domAuthorMinify(raja, opts, h, req, res) {
 	h.page.run(domTransform, !!opts.minify, function(err, groups, cb) {
 		if (err) return cb(err);
-		build(raja, h.author.url, groups, opts, cb);
+		build(raja, groups, opts, cb);
 	});
 }
 
@@ -42,23 +43,23 @@ function domTransform(minify, done) {
 	function getGroups(selector, att, mime) {
 		var groups = [];
 		var nodes = Array.prototype.slice.call(document.querySelectorAll(selector));
-		var group;
+		var resource;
 		nodes.forEach(function(node) {
 			if (!node.hasAttribute(att) || !node.getAttribute(att)) return;
 			var single = !node.hasAttribute('to');
 			if (single && !minify) return;
-			if (!group || single) {
-				group = {list: []};
-				groups.push(group);
+			if (!resource || single) {
+				resource = {nodes: []};
+				groups.push(resource);
 			}
-			group.list.push(node);
-			if (node.getAttribute('to') || single) group = null;
+			resource.nodes.push(node);
+			if (node.getAttribute('to') || single) resource = null;
 		});
-		groups.forEach(function(group) {
-			var list = [];
-			var last = group.list.slice(-1).pop();
-			group.list.forEach(function(node) {
-				list.push({src: node[att]});
+		groups.forEach(function(resource) {
+			var resources = {};
+			var last = resource.nodes.slice(-1).pop();
+			resource.nodes.forEach(function(node) {
+				resources[node[att]] = true;
 				if (node != last) {
 					var next = node.nextSibling;
 					while (next && next.nodeType == 3) {
@@ -68,13 +69,13 @@ function domTransform(minify, done) {
 					node.parentNode.removeChild(node);
 				} else {
 					node[att] = renameTo(node.getAttribute(att), node.getAttribute('to') || node.getAttribute(att));
-					group.to = node[att]; // absolute
+					resource.url = node[att]; // absolute
 					node.removeAttribute('to');
 				}
 			});
-			group.list = list;
-			delete group.last;
-			group.mime = mime;
+			delete resource.nodes;
+			resource.resources = resources;
+			resource.headers = {'Content-Type': mime};
 		});
 		return groups;
 	}
@@ -84,37 +85,37 @@ function domTransform(minify, done) {
 	done(null, scripts.concat(styles));
 }
 
-function build(raja, authorUrl, groups, opts, cb) {
+function build(raja, groups, opts, cb) {
 	if (groups.length == 0) return cb();
 	var q = queue();
-	groups.forEach(function(group) {
-		q.defer(function(group, cb) {
-			raja.upsert({url: group.to, headers: {
-				"Content-Type": group.mime
-			}}, function(err, resource) {
-				group.resource = resource;
-				cb();
-			});
-		}, group);
+	var upsert = raja.upsert.bind(raja);
+	groups.forEach(function(resource) {
+		resource.builder = 'minify';
+		q.defer(upsert, resource);
 	});
-	q.awaitAll(function(err) {
+	q.awaitAll(function(err, resources) {
 		if (err) return cb(err);
 		q = queue();
-		groups.forEach(function(group) {
-			if (group.mime == "text/css") {
-				q.defer(batch, group.resource, group.list, processCss, resultCss, opts);
-			} else if (!opts.minify) {
-				q.defer(batch, group.resource, group.list, process, result, opts);
-			} else if (group.mime == "text/javascript") {
-				q.defer(batch, group.resource, group.list, processJs, resultJs, opts);
-			} else {
-				console.warn("raja-minify has unknown group");
-			}
+		resources.forEach(function(resource) {
+			q.defer(buildResource, opts, resource);
 		});
 		q.awaitAll(function(err) {
 			cb(err);
 		});
 	});
+}
+
+function buildResource(opts, resource, cb) {
+	if (resource.is("text/css")) {
+		batch(resource, processCss, resultCss, opts, cb);
+	} else if (!opts.minify) {
+		batch(resource, process, result, opts, cb);
+	} else if (resource.is("text/javascript")) {
+		batch(resource, processJs, resultJs, opts, cb);
+	} else {
+		console.log(resource)
+		cb(new Error("raja-minify cannot process resource " + resource.url));
+	}
 }
 
 function process(to, url, data, cur, opts) {
@@ -157,29 +158,17 @@ function resultJs(to, cur) {
 	return cur.print_to_string({source_map: source_map});
 }
 
-function batch(resource, list, process, result, opts, cb) {
+function batch(resource, process, result, opts, cb) {
 	var q = queue();
 	var cur;
-	list.forEach(function(obj) {
-		q.defer(function(obj, cb) {
-			if (obj.src) {
-				resource.load(obj.src, function(err, data) {
-					if (err) return cb(err);
-					obj.data = data;
-					cb(null, obj);
-				});
-			} else if (obj.text) {
-				obj.data = obj.text;
-				cb(null, obj);
-			} else {
-				cb();
-			}
-		}, obj);
+	var load = resource.load.bind(resource);
+	Object.keys(resource.resources).forEach(function(url) {
+		q.defer(load, url);
 	});
-	q.awaitAll(function(err, list) {
+	q.awaitAll(function(err, resources) {
 		if (err) return cb(err);
-		list.forEach(function(obj) {
-			cur = process(resource.url, obj.src, obj.data, cur, opts);
+		resources.forEach(function(child) {
+			cur = process(resource.url, child.url, child.data, cur, opts);
 		});
 		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
 		resource.data = result(resource.url, cur);
