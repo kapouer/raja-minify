@@ -17,8 +17,8 @@ module.exports = function(raja, opts) {
 	raja.builders.minify = buildResource.bind(null, opts);
 };
 
-function domAuthorMinify(raja, opts, h, req, res) {
-	h.page.run(domTransform, !!opts.minify, function(err, groups, cb) {
+function domAuthorMinify(raja, opts, page) {
+	page.run(domTransform, !!opts.minify, function(err, groups, cb) {
 		if (err) return cb(err);
 		build(raja, groups, opts, cb);
 	});
