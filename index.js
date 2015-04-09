@@ -5,6 +5,7 @@ var postcssUrl = require("postcss-url");
 var uglify = require('uglify-js');
 var autoprefixer = require('autoprefixer-core');
 var csswring = require('csswring');
+var debug = require('debug')('raja:minify');
 
 
 // require('raja-minify')(raja, opts);
@@ -17,7 +18,8 @@ module.exports = function(raja, opts) {
 	raja.builders.minify = buildResource.bind(null, opts);
 };
 
-function domAuthorMinify(raja, opts, page) {
+function domAuthorMinify(raja, opts, page, resource) {
+	debug('minify on', resource.key);
 	page.run(domTransform, !!opts.minify, function(err, groups, cb) {
 		if (err) return cb(err);
 		build(raja, groups, opts, cb);
@@ -172,6 +174,7 @@ function batch(resource, process, result, opts, cb) {
 		});
 		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
 		resource.data = result(resource.url, cur);
+		debug('minified', resource.url);
 		resource.save(cb);
 	});
 }
