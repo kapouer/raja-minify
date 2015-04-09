@@ -33,6 +33,6 @@
     "uglify-js": "^2.4.16"
   },
   "peerDependencies": {
-    "raja": "^0.21.0"
+    "raja": "^0.21.1"
   }
 }
