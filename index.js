@@ -170,6 +170,7 @@ function batch(resource, process, result, opts, cb) {
 	q.awaitAll(function(err, resources) {
 		if (err) return cb(err);
 		resources.forEach(function(child) {
+			debug('minifying', child.url);
 			cur = process(resource.url, child.url, child.data, cur, opts);
 		});
 		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
