@@ -165,6 +165,7 @@ function batch(resource, process, result, opts, cb) {
 	var cur;
 	var load = resource.load.bind(resource);
 	Object.keys(resource.resources).forEach(function(url) {
+		debug("minify is loading", url);
 		q.defer(load, url);
 	});
 	q.awaitAll(function(err, resources) {
