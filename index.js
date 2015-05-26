@@ -108,6 +108,7 @@ function build(raja, groups, opts, cb) {
 }
 
 function buildResource(opts, resource, cb) {
+	if (resource.valid) return cb();
 	if (resource.is("text/css")) {
 		batch(resource, processCss, resultCss, opts, cb);
 	} else if (!opts.minify) {
