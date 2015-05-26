@@ -50,6 +50,9 @@ function domTransform(minify, done) {
 			if (!node.hasAttribute(att) || !node.getAttribute(att)) return;
 			var single = !node.hasAttribute('to');
 			if (single && !minify) return;
+			// ignore foreign url
+			var url = new URL(node[att]);
+			if (url.host != document.location.host) return;
 			if (!resource || single) {
 				resource = {nodes: []};
 				groups.push(resource);
