@@ -181,6 +181,7 @@ function batch(resource, process, result, opts, cb) {
 		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
 		resource.data = result(resource.url, cur);
 		debug('minified', resource.url);
+		resource.valid = true;
 		resource.save(cb);
 	});
 }
