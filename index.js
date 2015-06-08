@@ -138,7 +138,7 @@ function processCss(to, url, data, ref) {
 	if (Buffer.isBuffer(data)) data = data.toString();
 	var root = postcss.parse(data, {from: url, safe: true});
 	if (!ref.root) ref.root = root;
-	else ref.root.append(root);
+	else ref.root.push(root);
 }
 
 function resultCss(to, root, opts, cb) {
