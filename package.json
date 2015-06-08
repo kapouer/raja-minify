@@ -1,6 +1,6 @@
 {
   "name": "raja-minify",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "Scripts and Stylesheets minification plugin for Raja",
   "main": "index.js",
   "scripts": {
