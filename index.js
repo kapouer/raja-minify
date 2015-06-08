@@ -124,65 +124,71 @@ function buildResource(opts, resource, cb) {
 	}
 }
 
-function process(to, url, data, cur, opts) {
+function process(to, url, data, ref) {
 	if (Buffer.isBuffer(data)) data = data.toString();
-	if (!cur) cur = [];
-	cur.push(data);
-	return cur;
+	if (!ref.root) ref.root = [];
+	ref.root.push(data);
 }
 
-function result(to, cur) {
-	return cur.join("\n");
+function result(to, root, opts, cb) {
+	cb(null, root.join("\n"));
 }
 
-function processCss(to, url, data, cur, opts) {
+function processCss(to, url, data, ref) {
 	if (Buffer.isBuffer(data)) data = data.toString();
-	var parsed = postcss.parse(data, {from: url, safe: true});
-	postcssUrl({url: "rebase"})(parsed, {from: url, to: to});
-	autoprefixer({ browsers: opts.browsers }).postcss(parsed);
-	if (opts.minify) csswring({preserveHacks: true}).postcss(parsed);
-	if (!cur) cur = parsed;
-	else cur.push(parsed);
-	return cur;
+	var root = postcss.parse(data, {from: url, safe: true});
+	if (!ref.root) ref.root = root;
+	else ref.root.append(root);
 }
 
-function resultCss(to, cur) {
-	return cur.toResult({to: to}).toString();
+function resultCss(to, root, opts, cb) {
+	var plugins = opts.postcssPlugins || [];
+	plugins.push(postcssUrl({url: "rebase"}));
+	plugins.push(autoprefixer({ browsers: opts.browsers }));
+	if (opts.minify) plugins.push(csswring({preserveHacks: true}));
+	postcss(plugins).process(root, {to: to}).then(function(result) {
+		cb(null, result.css);
+	}, function(err) {
+		cb(err);
+	});
 }
 
-function processJs(to, url, data, cur, opts) {
+function processJs(to, url, data, ref, cb) {
 	if (Buffer.isBuffer(data)) data = data.toString();
-	cur = uglify.parse(data, {filename: url, toplevel: cur});
-	return cur;
+	var root = uglify.parse(data, {filename: url, toplevel: ref.root});
+	if (!ref.root) ref.root = root;
 }
 
-function resultJs(to, cur) {
-	cur.figure_out_scope();
-	cur.compute_char_frequency();
-	cur.mangle_names();
+function resultJs(to, root, opts, cb) {
+	root.figure_out_scope();
+	root.compute_char_frequency();
+	root.mangle_names();
 	var source_map = uglify.SourceMap();
-	return cur.print_to_string({source_map: source_map});
+	cb(null, root.print_to_string({source_map: source_map}));
 }
 
 function batch(resource, process, result, opts, cb) {
 	var q = queue();
-	var cur;
-	var load = resource.load.bind(resource);
+	var ref = {};
 	Object.keys(resource.resources).forEach(function(url) {
 		debug("minify is loading", url);
-		q.defer(load, url);
+		q.defer(function(url, cb) {
+			resource.load(url, function(err, child) {
+				debug('minifying', child.url);
+				process(resource.url, child.url, child.data, ref);
+				cb();
+			});
+		}, url);
 	});
-	q.awaitAll(function(err, resources) {
+	q.awaitAll(function(err) {
 		if (err) return cb(err);
-		resources.forEach(function(child) {
-			debug('minifying', child.url);
-			cur = process(resource.url, child.url, child.data, cur, opts);
+		result(resource.url, ref.root, opts, function(err, data) {
+			if (err) return cb(err);
+			resource.data = data;
+			debug('minified', resource.url);
+			resource.valid = true;
+			resource.save(cb);
 		});
-		if (!cur) return cb(new Error("Missing current parsed object for " + resource.url));
-		resource.data = result(resource.url, cur);
-		debug('minified', resource.url);
-		resource.valid = true;
-		resource.save(cb);
 	});
 }
 
