@@ -169,20 +169,17 @@ function resultJs(to, root, opts, cb) {
 
 function batch(resource, process, result, opts, cb) {
 	var q = queue();
-	var ref = {};
+	var load = resource.load.bind(resource);
 	Object.keys(resource.resources).forEach(function(url) {
 		debug("minify is loading", url);
-		q.defer(function(url, cb) {
-			resource.load(url, function(err, child) {
-				if (err) return cb(err);
-				debug('minifying', child.url);
-				process(resource.url, child.url, child.data, ref);
-				cb();
-			});
-		}, url);
+		q.defer(load, url);
 	});
-	q.awaitAll(function(err) {
+	q.awaitAll(function(err, resources) {
 		if (err) return cb(err);
+		var ref = {};
+		resources.forEach(function(child) {
+			process(resource.url, child.url, child.data, ref);
+		});
 		result(resource.url, ref.root, opts, function(err, data) {
 			if (err) return cb(err);
 			resource.data = data;
