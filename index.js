@@ -174,6 +174,7 @@ function batch(resource, process, result, opts, cb) {
 		debug("minify is loading", url);
 		q.defer(function(url, cb) {
 			resource.load(url, function(err, child) {
+				if (err) return cb(err);
 				debug('minifying', child.url);
 				process(resource.url, child.url, child.data, ref);
 				cb();
