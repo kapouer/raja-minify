@@ -94,8 +94,15 @@ function build(raja, groups, opts, cb) {
 	if (groups.length == 0) return cb();
 	var q = queue();
 	var upsert = raja.upsert.bind(raja);
+	var ns = raja.opts.namespace;
 	groups.forEach(function(resource) {
 		resource.builder = 'minify';
+		resource.headers['X-Raja'] = ns;
+		var resources = {};
+		for (var url in resource.resources) {
+			resources[raja.reqkey({url: url, headers: {'X-Raja': ns}})] = {headers: {'X-Raja': ns}};
+		}
+		resource.resources = resources;
 		q.defer(upsert, resource);
 	});
 	q.awaitAll(function(err, resources) {
@@ -172,7 +179,7 @@ function batch(resource, process, result, opts, cb) {
 	var load = resource.load.bind(resource);
 	Object.keys(resource.resources).forEach(function(url) {
 		debug("minify is loading", url);
-		q.defer(load, url);
+		q.defer(load, url, {headers: {'X-Raja':resource.raja.opts.namespace}});
 	});
 	q.awaitAll(function(err, resources) {
 		if (err) return cb(err);
