@@ -1,6 +1,6 @@
 {
   "name": "raja-minify",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "Scripts and Stylesheets minification plugin for Raja",
   "main": "index.js",
   "scripts": {
@@ -33,6 +33,6 @@
     "uglify-js": "^2.4.23"
   },
   "peerDependencies": {
-    "raja": "^0.25.0"
+    "raja": "^0.26.0"
   }
 }
