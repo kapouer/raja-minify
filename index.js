@@ -20,7 +20,7 @@ module.exports = function(raja, opts) {
 
 function domAuthorMinify(raja, opts, page, resource) {
 	debug('minify on', resource.key);
-	page.run(domTransform, !!opts.minify, function(err, groups, cb) {
+	page.wait('ready').run(domTransform, !!opts.minify, function(err, groups, cb) {
 		if (err) return cb(err);
 		build(raja, groups, opts, cb);
 	});
