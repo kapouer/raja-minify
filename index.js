@@ -59,15 +59,16 @@ function domTransform(minify, done) {
 				resource = {nodes: []};
 				groups.push(resource);
 			}
-			resource.nodes.push(node);
+			resource.nodes.push({node: node, href: url.href});
 			if (node.getAttribute('to') || single) resource = null;
 		});
 		groups.forEach(function(resource) {
 			var resources = {};
 			var last = resource.nodes.slice(-1).pop();
-			resource.nodes.forEach(function(node) {
-				resources[node[att]] = true;
-				if (node != last) {
+			resource.nodes.forEach(function(obj) {
+				resources[obj.href] = true;
+				var node = obj.node;
+				if (node != last.node) {
 					var next = node.nextSibling;
 					while (next && next.nodeType == 3) {
 						next.parentNode.removeChild(next);
@@ -76,7 +77,7 @@ function domTransform(minify, done) {
 					node.parentNode.removeChild(node);
 				} else {
 					node[att] = renameTo(node.getAttribute(att), node.getAttribute('to') || node.getAttribute(att));
-					resource.url = node[att]; // absolute
+					resource.url = (new URL(node[att])).href;
 					node.removeAttribute('to');
 				}
 			});
