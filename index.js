@@ -31,7 +31,7 @@ function domAuthorMinify(raja, opts, page, resource) {
 function domTransform(minify, done) {
 	function renameTo(src, to) {
 		if (src != to) {
-			if (to[0] == '../' || to[0] == './' || to[0] != '/') {
+			if (to[0] == '../' || to[0] == './' || to[0] != '/') {
 				// remove last component from src
 				src = src.split('/');
 				src.pop();
@@ -76,7 +76,7 @@ function domTransform(minify, done) {
 					}
 					node.parentNode.removeChild(node);
 				} else {
-					node[att] = renameTo(node.getAttribute(att), node.getAttribute('to') || node.getAttribute(att));
+					node[att] = renameTo(node.getAttribute(att), node.getAttribute('to') || node.getAttribute(att));
 					resource.url = (new URL(node[att])).href;
 					node.removeAttribute('to');
 				}
@@ -129,7 +129,7 @@ function buildResource(opts, resource, cb) {
 	} else if (resource.is("text/javascript")) {
 		batch(resource, processJs, resultJs, opts, cb);
 	} else {
-		console.log(resource)
+		console.info(resource);
 		cb(new Error("raja-minify cannot process resource " + resource.url));
 	}
 }
@@ -163,7 +163,7 @@ function resultCss(to, root, opts, cb) {
 	});
 }
 
-function processJs(to, url, data, ref, cb) {
+function processJs(to, url, data, ref) {
 	if (Buffer.isBuffer(data)) data = data.toString();
 	var root = uglify.parse(data, {filename: url, toplevel: ref.root});
 	if (!ref.root) ref.root = root;
