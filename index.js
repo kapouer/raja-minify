@@ -181,6 +181,8 @@ function batch(resource, process, result, opts, cb) {
 	var q = queue();
 	var load = resource.load.bind(resource);
 	Object.keys(resource.resources).forEach(function(url) {
+		var res = resource.resources[url];
+		if (res && res.builder == "local") return;
 		debug("minify is loading", url);
 		q.defer(load, url, {headers: {'X-Raja':resource.raja.opts.namespace}});
 	});
